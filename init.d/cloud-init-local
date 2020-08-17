@@ -54,15 +54,15 @@
 RETVAL=0
 
 prog="cloud-init-local"
-cloud_init="/QOpenSys/pkgs/lib/cloudinitpy3/cloud-init"
-conf="/QOpenSys/pkgs/lib/cloudinitpy3/icfg/cloud.cfg"
+cloud_init="/QOpenSys/pkgs/lib/cloudinit/cloud-init"
+conf="/QOpenSys/pkgs/lib/cloudinit/icfg/cloud.cfg"
 
 # If there exist sysconfig/default variable override files use it...
 [ -f /etc/sysconfig/cloud-init ] && . /etc/sysconfig/cloud-init
 [ -f /etc/default/cloud-init ] && . /etc/default/cloud-init
 
 mkdir -p /var/log
-#/QOpenSys/pkgs/bin/pip2 -q install /QOpenSys/pkgs/lib/cloudinitpy3/itoolkit/itoolkit-*-cp27m-*.whl >> /var/log/cloud-init.log 2>&1
+#/QOpenSys/pkgs/bin/pip2 -q install /QOpenSys/pkgs/lib/cloudinit/itoolkit/itoolkit-*-cp27m-*.whl >> /var/log/cloud-init.log 2>&1
 
 start() {
     [ -x $cloud_init ] || return 5

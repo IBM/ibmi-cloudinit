@@ -82,16 +82,16 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
             else:
                 util.logexc(LOG, "The directory /QOPT/CONFIG-2 not exists")
                 # read from the backup directory
-                if os.path.isdir("/QOpenSys/pkgs/lib/cloudinitpy3/cloud/CONFIG-2/openstack"):
+                if os.path.isdir("/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2/openstack"):
                     try:
                         util.logexc(LOG, "reading config drive from backup on IBM i")
-                        results = read_config_drive("/QOpenSys/pkgs/lib/cloudinitpy3/cloud/CONFIG-2")
-                        found = "/QOpenSys/pkgs/lib/cloudinitpy3/cloud/CONFIG-2"
+                        results = read_config_drive("/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2")
+                        found = "/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2"
                     except openstack.NonReadable:
                         found = None
-                        util.logexc(LOG, "Failed reading config drive from %s on IBM i","/QOpenSys/pkgs/lib/cloudinitpy3/cloud/CONFIG-2")
+                        util.logexc(LOG, "Failed reading config drive from %s on IBM i","/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2")
                 else:
-                    util.logexc(LOG, "The backup directory %s not exists", "/QOpenSys/pkgs/lib/cloudinitpy3/cloud/CONFIG-2/openstack")
+                    util.logexc(LOG, "The backup directory %s not exists", "/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2/openstack")
                     found = None
         else:
             if not found:

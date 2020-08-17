@@ -55,8 +55,8 @@
 RETVAL=0
 
 prog="cloud-config"
-cloud_init="/QOpenSys/pkgs/lib/cloudinitpy3/cloud-init"
-conf="/QOpenSys/pkgs/lib/cloudinitpy3/icfg/cloud.cfg"
+cloud_init="/QOpenSys/pkgs/lib/cloudinit/cloud-init"
+conf="/QOpenSys/pkgs/lib/cloudinit/icfg/cloud.cfg"
 
 # If there exist sysconfig/default variable override files use it...
 [ -f /etc/sysconfig/cloud-init ] && . /etc/sysconfig/cloud-init

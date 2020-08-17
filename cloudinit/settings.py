@@ -24,7 +24,7 @@
 CFG_ENV_NAME = "CLOUD_CFG"
 
 # This is expected to be a yaml formatted file
-CLOUD_CONFIG = '/QOpenSys/pkgs/lib/cloudinitpy3/icfg/cloud.cfg'
+CLOUD_CONFIG = '/QOpenSys/pkgs/lib/cloudinit/icfg/cloud.cfg'
 
 # What u get if no config is provided
 CFG_BUILTIN = {
@@ -50,8 +50,8 @@ CFG_BUILTIN = {
     'syslog_fix_perms': 'QSYS:',
     'system_info': {
         'paths': {
-            'cloud_dir': '/QOpenSys/pkgs/lib/cloudinitpy3/cloud/',
-            'templates_dir': '/QOpenSys/pkgs/lib/cloudinitpy3/icfg/templates/',
+            'cloud_dir': '/QOpenSys/pkgs/lib/cloudinit/cloud/',
+            'templates_dir': '/QOpenSys/pkgs/lib/cloudinit/icfg/templates/',
         },
         'distro': 'aix',
     },

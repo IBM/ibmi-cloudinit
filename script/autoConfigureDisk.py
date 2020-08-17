@@ -20,9 +20,9 @@ disks = {
 }
 import sys
 try:
-    sys.path.insert(sys.path.index('/QOpenSys/pkgs/lib/python3.6/site-packages'),'/QOpenSys/pkgs/lib/cloudinitpy3')
+    sys.path.insert(sys.path.index('/QOpenSys/pkgs/lib/python3.6/site-packages'),'/QOpenSys/pkgs/lib/cloudinit')
 except ValueError:
-    sys.path.append('/QOpenSys/pkgs/lib/cloudinitpy3')
+    sys.path.append('/QOpenSys/pkgs/lib/cloudinit')
 
 import subprocess
 import logging
