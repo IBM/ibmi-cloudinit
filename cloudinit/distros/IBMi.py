@@ -8,7 +8,6 @@ from cloudinit import ssh_util
 from cloudinit.distros import net_util
 from cloudinit.distros import rhel_util
 from cloudinit.distros import IBMi_util
-from cloudinit.distros import IBMi_util
 from cloudinit.settings import PER_INSTANCE
 import re
 from cloudinit.distros.parsers.hostname import HostnameConf
@@ -22,13 +21,13 @@ import subprocess
 
 
 from itoolkit import *
-from itoolkit.db2.idb2call import *
+from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
 __ibmi_distro_version__ = "1.3"
 
 conn = dbi.connect()
-itransport = iDB2Call(conn)
+itransport = DatabaseTransport(conn)
 
 basestring = str
 LOG = logging.getLogger(__name__)

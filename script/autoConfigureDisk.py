@@ -27,7 +27,7 @@ except ValueError:
 import subprocess
 import logging
 from itoolkit import *
-from itoolkit.db2.idb2call import *
+from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ logger.addHandler(handler)
 logger.addHandler(console)
 
 conn = dbi.connect()
-itransport = iDB2Call(conn)
+itransport = DatabaseTransport(conn)
 
 def getDetailConfig():
     names = []

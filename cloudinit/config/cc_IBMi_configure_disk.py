@@ -2,11 +2,11 @@ from cloudinit import util
 from cloudinit import log as logging
 
 from itoolkit import *
-from itoolkit.db2.idb2call import *
+from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
 conn = dbi.connect()
-itransport = iDB2Call(conn)
+itransport = DatabaseTransport(conn)
 
 from cloudinit.settings import PER_INSTANCE
 from cloudinit.settings import PER_ALWAYS

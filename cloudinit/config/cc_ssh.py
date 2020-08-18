@@ -30,11 +30,11 @@ from cloudinit import ssh_util
 from cloudinit import util
 from cloudinit import log as logging
 from itoolkit import *
-from itoolkit.db2.idb2call import *
+from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
 conn = dbi.connect()
-itransport = iDB2Call(conn)
+itransport = DatabaseTransport(conn)
 #frequency = PER_ALWAYS
 LOG = logging.getLogger(__name__)
 
