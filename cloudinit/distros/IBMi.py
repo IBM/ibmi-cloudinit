@@ -201,6 +201,8 @@ class Distro(distros.Distro):
           if int(RHRI0100_t['rhrAvl']) > 0:
             mac = RHRI0100_t['MAC']
             LOG.debug("        Mac address................%s",mac)
+            mac.ljust(12, '0')
+            LOG.debug("        Mac address append 0.......%s",mac)
             return mac
         else:
           LOG.debug(qgyrhr['error'])
@@ -538,7 +540,7 @@ class Distro(distros.Distro):
 
                     # get the line description name from the MAC address
                     mac_address = info['hwaddress'].upper().replace(":","")
-                    mac_address = mac_address.rstrip('0')
+                    # mac_address = mac_address.rstrip('0')
                     lined = mac_lind[mac_address]
 
                     chdev_cmd.append("LIND(" + lined + ")")
