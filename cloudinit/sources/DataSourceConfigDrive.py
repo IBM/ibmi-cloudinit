@@ -19,13 +19,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import platform
 
 from cloudinit import log as logging
 from cloudinit import sources
 from cloudinit import util
 from cloudinit.distros import aix_util
-import platform
-
 from cloudinit.sources.helpers import openstack
 
 LOG = logging.getLogger(__name__)
@@ -46,7 +45,9 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
         super(DataSourceConfigDrive, self).__init__(sys_cfg, distro, paths)
         self.source = None
         self.dsmode = 'local'
-        self.seed_dir = os.path.join(paths.seed_dir, 'config_drive')
+        self.seed_dir = os.path.join(paths.seed_dir, 'config_drive') # seed dir is for Db2 Mirror on IBMi
+        self.opt_dir = '/QOPT/CONFIG-2' # optical device dir is for PowerVC on IBMi
+        self.backup_dir = '/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2' # optical device backup dir during AE run on IBMi
         self.version = None
         self.ec2_metadata = None
         self.files = {}
@@ -59,62 +60,55 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
 
     def get_data(self):
         found = None
-        md = {}
+        meta_data = {}
         results = {}
+
+        # read from the seed directory
         if os.path.isdir(self.seed_dir):
             try:
                 results = read_config_drive(self.seed_dir)
                 found = self.seed_dir
             except openstack.NonReadable:
-                util.logexc(LOG, "Failed reading config drive from %s",
-                            self.seed_dir)
+                found = None
+                util.logexc(LOG, "Failed reading config drive from %s", self.seed_dir)
         else:
-            util.logexc(LOG, "The seed directory %s not exists",self.seed_dir)
+            found = None
+            util.logexc(LOG, "The seed directory %s not exists", self.seed_dir)
 
-        if (platform.system() == "OS400") and not found :
-            if os.path.isdir("/QOPT/CONFIG-2/openstack"):
+        if not found:
+            # read from the opt device directory
+            if os.path.isdir(self.opt_dir):
                 try:
-                    results = read_config_drive("/QOPT/CONFIG-2")
-                    found = "/QOPT/CONFIG-2"
+                    results = read_config_drive(self.opt_dir)
+                    found = self.opt_dir
                 except openstack.NonReadable:
                     found = None
-                    util.logexc(LOG, "Failed reading config drive from %s on IBM i","/QOPT/CONFIG-2")
+                    util.logexc(LOG, "Failed reading config drive from %s", self.opt_dir)
             else:
-                util.logexc(LOG, "The directory /QOPT/CONFIG-2 not exists")
-                # read from the backup directory
-                if os.path.isdir("/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2/openstack"):
-                    try:
-                        util.logexc(LOG, "reading config drive from backup on IBM i")
-                        results = read_config_drive("/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2")
-                        found = "/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2"
-                    except openstack.NonReadable:
-                        found = None
-                        util.logexc(LOG, "Failed reading config drive from %s on IBM i","/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2")
-                else:
-                    util.logexc(LOG, "The backup directory %s not exists", "/QOpenSys/pkgs/lib/cloudinit/cloud/CONFIG-2/openstack")
+                util.logexc(LOG, "The opt device directory %s not exists", self.opt_dir)
+
+        if not found:
+            # read from the opt device backup directory
+            if os.path.isdir(self.backup_dir):
+                try:
+                    util.logexc(LOG, "reading config drive from %s", self.backup_dir)
+                    results = read_config_drive(self.backup_dir)
+                    found = self.backup_dir
+                except openstack.NonReadable:
                     found = None
-        else:
-            if not found:
-                for dev in find_candidate_devs():
-                    try:
-                        results = aix_util.mount_cb(dev, read_config_drive)
-                        found = dev
-                    except openstack.NonReadable:
-                        pass
-                    except util.MountFailedError:
-                        pass
-                    except openstack.BrokenMetadata:
-                        util.logexc(LOG, "Broken config drive: %s", dev)
-                    if found:
-                        break
+                    util.logexc(LOG, "Failed reading config drive from %s", self.backup_dir)
+            else:
+                util.logexc(LOG, "The opt device backup directory %s not exists", self.backup_dir)
+                found = None
+
         if not found:
             return False
 
-        md = results.get('metadata', {})
-        md = util.mergemanydict([md, DEFAULT_METADATA])
+        meta_data = results.get('metadata', {})
+        meta_data = util.mergemanydict([meta_data, DEFAULT_METADATA])
         user_dsmode = results.get('dsmode', None)
         if user_dsmode not in VALID_DSMODES + (None,):
-            LOG.warn("User specified invalid mode: %s", user_dsmode)
+            LOG.warning("User specified invalid mode: %s", user_dsmode)
             user_dsmode = None
 
         dsmode = get_ds_mode(cfgdrv_ver=results['version'],
@@ -125,7 +119,6 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
             # most likely user specified
             return False
         LOG.debug("DataSourceConfigDrive.py get_data results=%s", results)
-        # TODO(smoser): fix this, its dirty.
         # we want to do some things (writing files and network config)
         # only on first boot, and even then, we want to do so in the
         # local datasource (so they happen earlier) even if the configured
@@ -133,11 +126,11 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
         # instance-id
         prev_iid = get_previous_iid(self.paths)
         LOG.debug("DataSourceConfigDrive.py get_data prev_iid=%s", prev_iid)
-        cur_iid = md['instance-id']
-        LOG.debug("DataSourceConfigDrive.py get_data cur_iid=%s",cur_iid)
-        LOG.debug("DataSourceConfigDrive.py get_data dsmode=%s,self.dsmode=%s",dsmode,self.dsmode)
+        cur_iid = meta_data['instance-id']
+        LOG.debug("DataSourceConfigDrive.py get_data cur_iid=%s", cur_iid)
+        LOG.debug("DataSourceConfigDrive.py get_data dsmode=%s,self.dsmode=%s", dsmode, self.dsmode)
 
-        #Comment out the below line
+        # Comment out the below line
         if prev_iid != cur_iid and self.dsmode == "local":
             on_first_boot(results, distro=self.distro)
         # dsmode != self.dsmode here if:
@@ -151,7 +144,7 @@ class DataSourceConfigDrive(openstack.SourceMixin, sources.DataSource):
             return False
 
         self.source = found
-        self.metadata = md
+        self.metadata = meta_data
         self.ec2_metadata = results.get('ec2-metadata')
         self.userdata_raw = results.get('userdata')
         self.version = results['version']
@@ -201,8 +194,8 @@ def read_config_drive(source_dir, version="2012-08-10"):
     for (functor, args, kwargs) in finders:
         try:
             return functor(*args, **kwargs)
-        except openstack.NonReadable as e:
-            excps.append(e)
+        except openstack.NonReadable as err:
+            excps.append(err)
     raise excps[-1]
 
 
@@ -220,23 +213,23 @@ def get_previous_iid(paths):
 def on_first_boot(data, distro=None):
     """Performs any first-boot actions using data read from a config-drive."""
     if not isinstance(data, dict):
-        raise TypeError("Config-drive data expected to be a dict; not %s"
-                        % (type(data)))
+        raise TypeError("Config-drive data expected to be a dict; not %s" % (type(data)))
     net_conf = data.get("network_config", '')
-    md = data.get('metadata', {})
-    lhost = md['local-hostname']
-    host =  md['hostname']
-    LOG.debug("DataSourceConfigDrive.py on_first_boot method local-hostname=%s,hostname=%s",lhost,host)
-    LOG.debug("DataSourceConfigDrive.py on_first_boot method type of distro=%s",str(type(distro)))
-    LOG.debug("DataSourceConfigDrive.py on_first_boot method type of OS=%s",platform.system())
+    meta_data = data.get('metadata', {})
+    lhost = meta_data['local-hostname']
+    host = meta_data['hostname']
+    LOG.debug(
+        "DataSourceConfigDrive.py on_first_boot method local-hostname=%s, hostname=%s", lhost, host)
+    LOG.debug("DataSourceConfigDrive.py on_first_boot method type of distro=%s", str(type(distro)))
+    LOG.debug("DataSourceConfigDrive.py on_first_boot method type of OS=%s", platform.system())
     if net_conf and distro:
-        if (platform.system() == "OS400"):
+        if platform.system() == "OS400":
             # move the systemname change here to avoid the netserver start issue
             distro.change_netserver_name(host)
-            if 'mrdb' in md:
-                distro.mrdb_configuration(md)
+            if 'mrdb' in meta_data:
+                distro.mrdb_configuration(meta_data)
             else:
-                distro.apply_IBMi_network(net_conf,host)
+                distro.apply_IBMi_network(net_conf, host)
         else:
             distro.apply_network(net_conf)
     files = data.get('files', {})
