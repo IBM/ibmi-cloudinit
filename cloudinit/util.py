@@ -716,11 +716,17 @@ def read_file_or_url(url, timeout=5, retries=10,
                                   ssl_details=ssl_details,
                                   exception_cb=exception_cb)
 
+def decode_binary(blob, encoding='utf-8'):
+    # Converts a binary type into a text type using given encoding.
+    if isinstance(blob, str):
+        return blob
+    return blob.decode(encoding)
 
 def load_yaml(blob, default=None, allowed=(dict,)):
     loaded = default
     try:
-        blob = str(blob)
+        # blob = str(blob)
+        blob = decode_binary(blob)
         LOG.debug(("Attempting to load yaml from string "
                  "of length %s with allowed root types %s"),
                  len(blob), allowed)

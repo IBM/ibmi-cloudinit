@@ -43,7 +43,7 @@ def getDetailConfig(disks):
         if not disks[disk].has_key('varyon'):
             disks[disk]['varyon'] = "Y"
         if not disks[disk].has_key('priority'):
-            disks[disk]['priority'] = sys.maxint
+            disks[disk]['priority'] = sys.maxsize
     new_disks = sorted(disks.items(), key=lambda obj: obj[1]['priority'])
     for disk in new_disks:
         names.append(disk[1].get('name').upper())

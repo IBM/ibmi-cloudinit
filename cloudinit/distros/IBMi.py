@@ -928,7 +928,7 @@ class Distro(distros.Distro):
                 if key == "expiredate":
                     try:
                         default_dfmt = self.retrieve_job_dateformat()
-                        if default_dfmt is "":
+                        if default_dfmt == "":
                             continue
                         #expiration_date = datetime.strptime(val.strip(), "%Y-%m-%d")
                         val = val.strftime(date_format[default_dfmt])
@@ -1044,16 +1044,22 @@ class Distro(distros.Distro):
                     LOG.info("user %s: lock password...", user)
                     self.lock_passwd(user)
             if existing and 'lock_passwd' in kwargs and kwargs.get('lock_passwd', True):
-                if ('passwd' in kwargs and kwargs['passwd']) or ('plain_text_passwd' in kwargs and kwargs['plain_text_passwd']):
-                    LOG.info("user %s: because of defining the password, skipping lock password...", user)
-                else:
-                    LOG.info("user %s: lock password...", user)
-                    self.lock_passwd(user)
+                # if ('passwd' in kwargs and kwargs['passwd']) or ('plain_text_passwd' in kwargs and kwargs['plain_text_passwd']):
+                #    LOG.info("user %s: because of defining the password, skipping lock password...", user)
+                #else:
+                #    LOG.info("user %s: lock password...", user)
+                #    self.lock_passwd(user)
+                # Chang Le: lock_passwd has high priority
+                LOG.info("user %s: lock password...", user)
+                self.lock_passwd(user)
 
             if not existing and kwargs.get('inactive', True):
                 self.set_inactive(user)
             if existing and 'inactive' in kwargs and kwargs.get('inactive', True):
                 self.set_inactive(user)
+            # Chang Le: should be able to change the user to active when the inactive is False
+            if existing and 'inactive' in kwargs and (not kwargs.get('inactive')):
+                self.set_active(user)
 
             LOG.debug("keys are " + str(kwargs.keys()))
 
@@ -1081,6 +1087,7 @@ class Distro(distros.Distro):
         except Exception as e:
             util.logexc(LOG, 'Failed to disable password for user %s', name)
 
+
     def set_inactive(self, name):
         """
         set inactive of a user, i.e., disable the user
@@ -1089,6 +1096,16 @@ class Distro(distros.Distro):
             util.subp(['system', 'CHGUSRPRF', name, 'STATUS(*DISABLED)'])
         except Exception as e:
             util.logexc(LOG, 'Failed to disable the user %s', name)
+
+
+    def set_active(self, name):
+        """
+        set active of a user, i.e., enable the user
+        """
+        try:
+            util.subp(['system', 'CHGUSRPRF', name, 'STATUS(*ENABLED)'])
+        except Exception as e:
+            util.logexc(LOG, 'Failed to enable the user %s', name)
 
 
     def formulate_addmem_group_cmd(self, user, group):
