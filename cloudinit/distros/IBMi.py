@@ -12,7 +12,7 @@ from cloudinit.settings import PER_INSTANCE
 import re
 from cloudinit.distros.parsers.hostname import HostnameConf
 import time
-from datetime import datetime, date, time
+import datetime
 import os
 import os.path
 import pwd
@@ -930,7 +930,6 @@ class Distro(distros.Distro):
                         default_dfmt = self.retrieve_job_dateformat()
                         if default_dfmt == "":
                             continue
-                        #expiration_date = datetime.strptime(val.strip(), "%Y-%m-%d")
                         val = val.strftime(date_format[default_dfmt])
                     except Exception as e:
                         LOG.error("Failed to parse the expirate date %s, skip setting the expirate date...", val)
@@ -1998,36 +1997,46 @@ class Distro(distros.Distro):
         LOG.debug("5 default NRGs removed")
         defaultLocalLind = "default"
         defaultLocalVLANID = "0"
-        # CALL PGM(QSYS/QMRDBNRG) PARM('ABC' '1' 'this is the description' '1' '2' '9.5.94.95 lind 123 2.2.2.2 1' '123.234.345.456 lind2 223 4.22.2.2 1')
+        defaultPairType = "0" # default RoCE version as v1. 0 means v1, 1 means v2
+        # CALL PGM(QSYS/QMRDBNRG) PARM('ABC' '1' 'this is the description' '1' '2' '9.5.94.95 lind 123 2.2.2.2 1 0' '123.234.345.456 lind2 223 4.22.2.2 1 0')
         for item in nrgs:
             add_nrgs_cmd_str = \
                 "CALL PGM(QSYS/QMRDBNRG) PARM(groupName groupType groupDesc loadBalLinkCount pairCount nrgIPAddrPairs)"
 
             groupName = item['groupName']
             groupType = str(item['groupType'])
-            groupDesc = item['groupDesc']
             loadBalLinkCount = str(item['loadBalLinkCount'])
             pairCount = str(len(item['nrgIPAddrPairs']))
+            if 'groupDesc' in item:
+                groupDesc = item['groupDesc']
+            else:
+                groupDesc = 'Db2 Mirror'
 
             nrgIPAddrPairs = ""
             for i in range(0, len(item['nrgIPAddrPairs'])):
                 ippair = item['nrgIPAddrPairs'][i]
 
-                if (ippair['localLind'].strip() == ''):
+                if ('localLind' in ippair) and (ippair['localLind'].strip() == ''):
                     localLind = defaultLocalLind
                 else:
                     localLind = ippair['localLind'].strip()
 
-                if (str(ippair['localVLANID']).strip() == ''):
+                if ('localVLANID' in ippair) and (str(ippair['localVLANID']).strip() == ''):
                     localVLANID = defaultLocalVLANID
                 else:
                     localVLANID = str(ippair['localVLANID']).strip()
+
+                if ('pairType' in ippair) and (str(ippair['pairType']).strip() == ''):
+                    pairType = defaultPairType
+                else:
+                    pairType = str(ippair['pairType']).strip()
 
                 nrgIPAddrPairs += ippair['localAddr'] + " " \
                                   + localLind + " " \
                                   + localVLANID + " " \
                                   + ippair['remoteAddr'] + " " \
-                                  + str(ippair['pairPriority'])
+                                  + str(ippair['pairPriority']) + " " \
+                                  + str(ippair['pairType'])
                 # if not the last item, need append ' ' between each items
                 if i != len(item['nrgIPAddrPairs']) - 1:
                     nrgIPAddrPairs += "' '"
@@ -2078,7 +2087,7 @@ class Distro(distros.Distro):
         for i in range(0, len(parm_array)):
             parmStr = parmStr + parm_array[i]
             if i != len(parm_array) - 1:
-                if sep is not "":
+                if sep != "":
                     parmStr = parmStr + sep + " " + sep
                 else:
                     parmStr += " "
@@ -2226,14 +2235,14 @@ class Distro(distros.Distro):
                     return status
             else:
                 fp = open(progress_log, mode)
-                current_time = time.strftime('%Y.%m.%d %H:%M:%S', time.localtime(time.time()))
+                current_time = datetime.datetime.now()
                 content = str(current_time) + " " + name + " " + status + "\n"
                 fp.write(content)
                 if 'fp' in locals():
                     fp.close()
                 return True
-        except IOError as e:
-            LOG.error("_mrdb_progress_log:IOError occurred,e=%s", e)
+        except Exception as e:
+            LOG.error("_mrdb_progress_log:Exception occurred,e=%s", e)
             if mode.startswith("r"):
                 if 'fp' in locals():
                     fp.close()
