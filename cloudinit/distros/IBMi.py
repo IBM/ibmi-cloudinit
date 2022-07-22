@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
-__ibmi_distro_version__ = "1.3"
+__ibmi_distro_version__ = "1.3-2"
 
 conn = dbi.connect()
 itransport = DatabaseTransport(conn)
@@ -1830,10 +1830,15 @@ class Distro(distros.Distro):
         else:
             LOG.debug(chgjob['error'])
 
-        LOG.debug(
-            "Remove the default NRGs firstly in case AE fail to clean it up")
-        self.mrdb_cleanup_NRGs()
-        LOG.debug("Default NRGs removed")
+        nrgConfigState = self.mrdb_QmrdbRtvNrgCfgState()
+        LOG.debug("mrdb_QmrdbRtvNrgCfgState return " + str(nrgConfigState))
+        if nrgConfigState != 2: # MrdbConfigComplete
+            LOG.debug("Remove the default NRGs firstly in case AE fail to clean it up")
+            self.mrdb_cleanup_NRGs()
+            LOG.debug("Default NRGs removed")
+        else:
+            LOG.debug("Current NRG config state is MrdbConfigComplete, do not remove NRG") 
+
         # CALL PGM(QSYS/QMRDBNRG) PARM('QIBMIFS' '1' 'group description' '1' '2' '9.5.94.95 lind 123 2.2.2.2 1 0' '123.234.345.456 lind2 223 4.22.2.2 1 0')
         for item in nrgs:
             add_nrgs_cmd_str = \
@@ -1952,6 +1957,36 @@ class Distro(distros.Distro):
         if 'success' in qmrdbapi:
             LOG.debug(qmrdbapi['success'])
             return int(qmrdbapi['rtn'])
+        else:
+            LOG.error(qmrdbapi['error'])
+        return -999
+
+    def mrdb_QmrdbRtvNrgCfgState(self):
+        itool = iToolKit()
+        itool.add(
+            iSrvPgm('qmrdbapi', 'QMRDBAPI', 'QmrdbRtvNrgCfgState')
+                .addParm(
+                iData('rState', '2i0', '')
+                )
+                .addParm(
+                iDS('MrdbSPIResult')
+                    .addData(iData('result', '10i0', ''))
+                    .addData(iData('additionalErrorCode', '10i0', ''))
+                    .addData(iData('offset', '10i0', ''))
+                    .addData(iData('reserved', '52a', ''))
+                )
+
+        )
+        # xmlservice
+        itool.call(itransport)
+        # output
+        qmrdbapi = itool.dict_out('qmrdbapi')
+        LOG.debug(qmrdbapi)
+        MrdbSPIResult = qmrdbapi['MrdbSPIResult']
+        if 'success' in qmrdbapi:
+            LOG.debug(qmrdbapi['success'])
+            if int(MrdbSPIResult['result']) == 0:
+                return int(qmrdbapi['rState'])
         else:
             LOG.error(qmrdbapi['error'])
         return -999
