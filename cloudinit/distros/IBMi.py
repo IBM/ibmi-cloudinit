@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
-__ibmi_distro_version__ = "1.3-2"
+__ibmi_distro_version__ = "1.4"
 
 conn = dbi.connect()
 itransport = DatabaseTransport(conn)
