@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
-__ibmi_distro_version__ = "1.4"
+__ibmi_distro_version__ = "1.5"
 
 conn = dbi.connect()
 itransport = DatabaseTransport(conn)
@@ -1462,6 +1462,7 @@ class Distro(distros.Distro):
             run_cmd = 0
             chdev_cmd = ['system']
             log_chdev_cmd = ['system']
+            mtu_option = "NOTSET"
 
             aix_dev = IBMi_util.translate_devname(info['device'])
             LOG.debug("dev=%s, aix_dev=%s", info['device'], aix_dev)
@@ -1492,6 +1493,11 @@ class Distro(distros.Distro):
 
                 for (key, val) in info.items():
                     LOG.debug("key=%s val=%s in info.iteritem", key, val)
+                    if key in 'mtu':
+                        mtu_option = "MTU(" + val + ")"
+                        LOG.debug(
+                            "mtu=%s, mtu_option=%s", info['mtu'], mtu_option
+                            )
                     if key in chdev_opts and val and isinstance(val, basestring):
                         if key in 'netmask':
                             val = "\'" + val + "\'"
@@ -1609,10 +1615,17 @@ class Distro(distros.Distro):
                         log_add_tcp_rte_cmd = ['system']
                         next_hop_option = "NEXTHOP(" + gateway + ")"
                         if info['ipv4']:
-                            add_tcp_rt_cmd.extend(
-                                ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, "MTU(*IFC)"])
-                            log_add_tcp_rte_cmd.extend(
-                                ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, "MTU(*IFC)"])
+                            # MTU set to *IFC when it does not exist in meta_data
+                            if (mtu_option != "NOTSET"):
+                                add_tcp_rt_cmd.extend(
+                                    ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, mtu_option])
+                                log_add_tcp_rte_cmd.extend(
+                                    ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, mtu_option])
+                            else:                            
+                                add_tcp_rt_cmd.extend(
+                                    ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, "MTU(*IFC)"])
+                                log_add_tcp_rte_cmd.extend(
+                                    ['ADDTCPRTE', "RTEDEST(*DFTROUTE)", next_hop_option, "MTU(*IFC)"])
                         if info['ipv6']:  # ipv4 and ipv6 can not both be true
                             add_tcp_rt_cmd.extend(
                                 ['ADDTCPRTE', "RTEDEST(*DFT6ROUTE)", next_hop_option, "BINDLIND(" + lined + ") ADRPFXLEN(*NONE)"])
