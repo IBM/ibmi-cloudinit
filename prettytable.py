@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3
+#!/QOpenSys/pkgs/bin/python3.9
 #
 # Copyright (c) 2009-2013, Luke Maurits <luke@maurits.id.au>
 # All rights reserved.

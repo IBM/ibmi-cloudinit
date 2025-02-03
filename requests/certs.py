@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3
+#!/QOpenSys/pkgs/bin/python3.9
 # -*- coding: utf-8 -*-
 
 """

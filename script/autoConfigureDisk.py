@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3
+#!/QOpenSys/pkgs/bin/python3.9
 disks = {
     "diskpool1":{
         "name" : "SYSBASE",
@@ -19,10 +19,7 @@ disks = {
     }
 }
 import sys
-try:
-    sys.path.insert(sys.path.index('/QOpenSys/pkgs/lib/python3.6/site-packages'),'/QOpenSys/pkgs/lib/cloudinit')
-except ValueError:
-    sys.path.append('/QOpenSys/pkgs/lib/cloudinit')
+sys.path.append('/QOpenSys/pkgs/lib/cloudinit')
 
 import subprocess
 import logging
