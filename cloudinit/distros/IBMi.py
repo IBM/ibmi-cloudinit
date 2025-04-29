@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 import ibm_db_dbi as dbi
 
-__ibmi_distro_version__ = "1.5.1"
+__ibmi_distro_version__ = "1.5.2"
 
 conn = dbi.connect()
 itransport = DatabaseTransport(conn)
@@ -1413,7 +1413,7 @@ class Distro(distros.Distro):
         return True
 
     # settings should be meta['network_config'], fqdn should be meta['hostname']
-    def mrdb_write_IBMi_network(self, settings, fqdn, bring_up=True):
+    def mrdb_write_IBMi_network(self, settings, fqdn, sts, bring_up=True):
         self._mrdb_METHOD_ENTER(
             sys._getframe().f_code.co_name, sys._getframe().f_lineno)
         self._mrdb_progress_log("ConfigNetwork", "START", "a+")
@@ -1445,6 +1445,75 @@ class Distro(distros.Distro):
         else:
             hostname = fqdn
         LOG.debug("hostname=%s", hostname)
+
+        # Configure Service Tools Server(STS)
+        if sts:
+            self._mrdb_progress_log("ConfigSTS", "START", "a+")     
+            try: 
+                LOG.debug("STS: Start updating configuration")
+                cursor = conn.cursor()
+
+                value_max_lengths = {
+                    "action": 10,
+                    "ip_version": 4,
+                    "ipv4_address": 15,
+                    "gateway_address": 15,
+                    "subnet_mask": 15,
+                    "ipv6_address": 45,
+                    "virtual_lan_id": 4,
+                    "interface_id": 16,
+                    "resource_name": 10,
+                    "server_name": 12,
+                    "duplex": 4,
+                    "network_speed": 4
+                }
+                # Debug: verify current user
+                cursor.execute("SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1")
+                current_user = cursor.fetchone()[0]
+                LOG.debug("STS: current user:%s", current_user)           
+                LOG.debug("STS: prepare the SQL CALL statement with parameters based upon metadata")
+
+                sql_key = []
+                sql_values = []
+                LOG.debug("sts:%s", sts)
+                for key, value in sts.items():
+                    if value and value.strip():
+                        length = value_max_lengths.get(key,45)
+                        # Get resource name based upon cmn_location
+                        if key == "cmn_location":
+                            for k, val in ip_rscname_dict.items():
+                                LOG.debug("cmn_location:%s, resource_name:%s", k, val)
+                                if value == k:
+                                    LOG.debug("STS: found matching cmn_location:%s, resource_name:%s", k, val)
+                                    sql_key.append(f"resource_name => CAST(? AS VARCHAR(10) CCSID 37)")
+                                    sql_values.append(val.strip())
+                                    break
+                        else:
+                            sql_key.append(f"{key} => CAST(? AS VARCHAR({length}) CCSID 37)")
+                            sql_values.append(value.strip())
+
+                # Build SQL CALL statement dynamically
+                sql = f"CALL QSYS2.CHANGE_SERVICE_TOOLS_SERVER({', '.join(sql_key)})"
+                LOG.debug("STS: generated SQL: %s", sql)
+                LOG.debug("STS: SQL values: %s", sql_values)
+
+                cursor.execute(sql, sql_values)
+                conn.commit()
+                LOG.debug("STS configuration updated successfully")
+                self._mrdb_progress_log("ConfigSTS", "SUCCESS", "a+")  
+
+            except Exception as e:
+                LOG.error("Unexpect error: %s", str(e))
+                self._mrdb_progress_log("ConfigSTS", "FAILED", "a+") 
+            except dbi.ProgrammingError as e:
+                LOG.error("Database error: %s", str(e))
+                self._mrdb_progress_log("ConfigSTS", "FAILED", "a+") 
+            except dbi.InterfaceError as e:
+                LOG.error("Connection error: %s", str(e))  
+                self._mrdb_progress_log("ConfigSTS", "FAILED", "a+")      
+            except dbi.OperationalError as e:
+                LOG.error("Operational error: %s", str(e))
+                self._mrdb_progress_log("ConfigSTS", "FAILED", "a+")       
 
         # Make the intermediate format as the rhel format...
         create_dhcp_file = True
@@ -2268,15 +2337,24 @@ class Distro(distros.Distro):
             LOG.error("Fatal Error:There is no 'nrgs' in metadata")
             return False
 
+        # Get Service Tools Server(STS) from metaData, it is optional
+        if 'sts' in metadata:
+            sts = metadata['sts']
+            LOG.debug("sts in meta_data:%s", sts)
+        else:
+            sts = {}
+            LOG.debug("There is no service tools server (STS) in metadata, continue")   
+
         self._mrdb_progress_log("ParserMetadata", "SUCCESS", "a+")
 
         if force:
             rc_network = self.mrdb_write_IBMi_network(
                 network_config, hostname, bring_up=True)
+                network_config, hostname, sts, bring_up=True)
         else:
             if (not step_network) or (step_network == "FAILED"):
                 rc_network = self.mrdb_write_IBMi_network(
-                    network_config, hostname, bring_up=True)
+                    network_config, hostname, sts, bring_up=True)
             else:
                 LOG.debug(
                     "Skip mrdb_write_IBMi_network since this step has already completed")
