@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 import warnings
 import os
-try:
-    import ibm_db
-    from ibm_db_dbi import connect, Connection
-except ImportError:
-    pass
+from itoolkit import *
+from itoolkit.transport import DirectTransport, Transport
 from ..transport.database import DatabaseTransport
 
 
@@ -42,17 +39,18 @@ class iDB2Call(DatabaseTransport): # noqa N801
             category=DeprecationWarning,
             stacklevel=2)
 
-        if hasattr(iuid, 'cursor'):
-            # iuid is a PEP-249 connection object, just store it
-            conn = iuid
-        elif isinstance(iuid, ibm_db.IBM_DBConnection):
-            # iuid is a ibm_db connection object, wrap it in an
-            # ibm_db_dbi connection object
-            conn = Connection(iuid)
-        else:
-            # user id and password passed, connect using ibm_db_dbi
-            ipwd = ipwd if ipwd else os.getenv('PASSWORD', None)
-            conn = connect(database=idb2, user=iuid, password=ipwd)
+        if iuid is None:
+            iuid = os.getenv('USER', None)
+        ipwd = ipwd if ipwd else os.getenv('PASSWORD', None)
+
+        #Create DirectTransport instance
+        itransport = DirectTransport(
+            database=idb2,
+            user=iuid,
+            password=ipwd,
+            ipc=ipc,
+            ctl=ictl
+        )
 
         if ilib is None:
             ilib = os.getenv('XMLSERVICE', 'QXMLSERV')
@@ -61,8 +59,8 @@ class iDB2Call(DatabaseTransport): # noqa N801
             msg = "isiz is deprecated and ignored"
             warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
 
-        super(iDB2Call, self).__init__(conn=conn, ctl=ictl, ipc=ipc,
-                                       schema=ilib)
+        super(iDB2Call, self).__init__(conn=itransport, ctl=ictl, ipc=ipc,
+                                      schema=ilib)                                
 
     def call(self, itool):
         """Call XMLSERVICE with accumulated actions.

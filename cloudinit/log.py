@@ -24,7 +24,7 @@ import logging
 import logging.config
 import logging.handlers
 
-import collections
+from collections.abc import Iterable
 import os
 import sys
 
@@ -81,7 +81,7 @@ def setupLogging(cfg=None):
         for a_cfg in cfg['log_cfgs']:
             if isinstance(a_cfg, (basestring, str)):
                 log_cfgs.append(a_cfg)
-            elif isinstance(a_cfg, (collections.Iterable)):
+            elif isinstance(a_cfg, Iterable):
                 cfg_str = [str(c) for c in a_cfg]
                 log_cfgs.append('\n'.join(cfg_str))
             else:

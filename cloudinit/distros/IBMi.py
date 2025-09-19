@@ -23,12 +23,12 @@ from itoolkit import iSrvPgm
 from itoolkit import iData
 from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
-import ibm_db_dbi as dbi
+from itoolkit.transport import DirectTransport
 
-__ibmi_distro_version__ = "1.6"
+__ibmi_distro_version__ = "1.8"
 
-conn = dbi.connect()
-itransport = DatabaseTransport(conn)
+# Initialize DirectTransport 
+itransport = DirectTransport()
 
 basestring = str
 LOG = logging.getLogger(__name__)
@@ -1378,6 +1378,151 @@ class Distro(distros.Distro):
                 sys._getframe().f_code.co_name, sys._getframe().f_lineno)
             return None
 
+    # get resource name based on mac address
+    def _mrdb_get_rscname_by_mac_address(self, hwaddress):
+        self._mrdb_METHOD_ENTER(
+            sys._getframe().f_code.co_name, sys._getframe().f_lineno)
+        itool = iToolKit()
+        itool.add(
+            iSrvPgm('qgyrhr', 'QGYRHR', 'QgyRtvHdwRscList')
+            .addParm(iDS('RHRL0100_t', {'len': 'rhrlen'})
+                     .addData(iData('rhrRet', '10i0', ''))
+                     .addData(iData('rhrAvl', '10i0', ''))
+                     .addData(iData('rhrNbr', '10i0', '', {'enddo': 'mycnt'}))
+                     .addData(iData('rhrLen', '10i0', ''))
+                     .addData(iDS('res_t', {'dim': '999', 'dou': 'mycnt'})
+                              .addData(iData('resCat', '10i0', ''))
+                              .addData(iData('resLvl', '10i0', ''))
+                              .addData(iData('resLin', '10i0', ''))
+                              .addData(iData('resNam', '10a', ''))
+                              .addData(iData('resTyp', '4a', ''))
+                              .addData(iData('resMod', '3a', ''))
+                              .addData(iData('resSts', '1a', ''))
+                              .addData(iData('resSys', '8a', ''))
+                              .addData(iData('resAdp', '12a', ''))
+                              .addData(iData('resDsc', '50h', ''))
+                              .addData(iData('resKnd', '24b', ''))
+                              )
+                     )
+            .addParm(iData('rcvlen', '10i0', '', {'setlen': 'rhrlen'}))
+            .addParm(iData('fmtnam', '10a', 'RHRL0100'))
+            .addParm(iData('rescat', '10i0', '2'))
+            .addParm(iDS('ERRC0100_t', {'len': 'errlen'})
+                     .addData(iData('errRet', '10i0', ''))
+                     .addData(iData('errAvl', '10i0', ''))
+                     .addData(iData('errExp', '7A', '', {'setlen': 'errlen'}))
+                     .addData(iData('errRsv', '1A', ''))
+                     )
+        )
+
+        itool.call(itransport)
+        qgyrhr = itool.dict_out('qgyrhr')
+        mac_address = ""
+        resource_name = ""
+        cur_macaddr = hwaddress.upper().replace(":", "")
+        LOG.debug("MAC address from meta_data: %s", cur_macaddress);
+        if 'success' in qgyrhr:
+            LOG.debug(qgyrhr['success'])
+            LOG.debug("    Length of receiver variable......%s",
+                      qgyrhr['rcvlen'])
+            LOG.debug("    Format name......................%s",
+                      qgyrhr['fmtnam'])
+            LOG.debug("    Resource category................%s",
+                      qgyrhr['rescat'])
+            RHRL0100_t = qgyrhr['RHRL0100_t']
+            LOG.debug("    RHRL0100_t:")
+            LOG.debug("      Number of resources returned...%s",
+                      RHRL0100_t['rhrNbr'])
+            if int(RHRL0100_t['rhrNbr']) > 0:
+                res_t = RHRL0100_t['res_t']
+                # mac_resource_names will be the mapping of mac address and resource name for assigning ip address
+                for rec in res_t:
+                    LOG.debug(
+                        "        --------------------------------------------------------")
+                    LOG.debug(
+                        "        Resource name................%s", rec['resNam'])
+                    if rec['resKnd'] == "0000000000000008000000000000000400000800000004" \
+                            or rec['resKnd'] == "0000000000000008000000000000000400000000000004":
+                        LOG.debug(
+                            "        Description..................%s", rec['resDsc'])
+                        LOG.debug(
+                            "        Resource kind................%s", rec['resKnd'])
+                        
+                        mac_address = self._mrdb_get_ethernet_mac(rec['resNam'])
+                        if mac_address and cur_macaddr:
+                            if cur_macaddr == mac_address:
+                                resource_name = rec['resNam']
+                                LOG.debug(
+                                    "Found Enthernet Port resource %s which has MAC address %s", rec['resNam'], mac_address)                            
+                if not resource_name:
+                    LOG.error(
+                        "Error when validating the MAC address %s from meta_data with the one from QgyRtvHdwRscInfo %s", cur_macadde, mac_address)
+                        
+        else:
+            LOG.debug("Error when calling QgyRtvHdwRscList to list communication resources and their hardware address, error=%s", qgyrhr['error'])
+        self._mrdb_METHOD_EXIT(sys._getframe().f_code.co_name, sys._getframe().f_lineno)
+        return resource_name
+
+    def _mrdb_get_ethernet_mac(self, res_name):
+        self._mrdb_METHOD_ENTER(
+            sys._getframe().f_code.co_name, sys._getframe().f_lineno)
+        itool = iToolKit()
+        itool.add(
+            iSrvPgm('qgyrhr', 'QGYRHR', 'QgyRtvHdwRscInfo', {'error': 'on'})
+            .addParm(iDS('RHRI0100_t', {'len': 'rhrlen'})
+                     .addData(iData('rhrRet', '10i0', ''))
+                     .addData(iData('rhrAvl', '10i0', ''))
+                     .addData(iData('sysBusNum', '10i0', ''))
+                     .addData(iData('sysBdNum', '10i0', ''))
+                     .addData(iData('sysCdNum', '10i0', ''))
+                     .addData(iData('IOBusAdd', '10i0', ''))
+                     .addData(iData('AdaptAdd', '10i0', ''))
+                     .addData(iData('PortNum', '10i0', ''))
+                     .addData(iData('srNum', '10a', ''))
+                     .addData(iData('partNum', '12a', ''))
+                     .addData(iData('frmID', '4a', ''))
+                     .addData(iData('cdPst', '5a', ''))
+                     .addData(iData('locCd', '79a', ''))
+                     .addData(iData('expSrNum', '15a', ''))
+                     .addData(iData('LANSpeed', '8a', '', {'hex': 'on'}))
+                     .addData(iData('LinkAgg', '1a', '', {'hex': 'on'}))
+                     .addData(iData('MAC', '6a', '', {'hex': 'on'}))
+                     )
+            .addParm(iData('rcvlen', '10i0', '', {'setlen': 'rhrlen'}))
+            .addParm(iData('fmtnam', '8a', 'RHRI0100'))
+            .addParm(iData('resnam', '10a', res_name))
+            .addParm(
+                iDS('ERRC0100_t', {'len': 'errlen'})
+                .addData(iData('errRet', '10i0', ''))
+                .addData(iData('errAvl', '10i0', ''))
+                .addData(iData('errExp', '7A', '', {'setlen': 'errlen'}))
+                .addData(iData('errRsv', '1A', ''))
+            )
+        )
+
+        itool.call(itransport)
+        qgyrhr = itool.dict_out('qgyrhr')
+
+        mac = None
+        if 'success' in qgyrhr:
+            LOG.debug(qgyrhr['success'])
+            LOG.debug("    Format name......................%s",
+                      qgyrhr['fmtnam'])
+            LOG.debug("    Resource Name....................%s", 
+                      qgyrhr['resnam'])
+            RHRI0100_t = qgyrhr['RHRI0100_t']
+            LOG.debug("    RHRI0100_t:")
+            if int(RHRI0100_t['rhrAvl']) > 0:
+                mac = RHRI0100_t['MAC']
+                LOG.debug("        Mac address................%s", mac)
+                mac.ljust(12, '0')
+                LOG.debug("        Mac address append 0.......%s", mac)
+        else:
+            LOG.debug("Error when calling QgyRtvHdwRscInfo to retrieve MAC address, error=%s", qgyrhr['error'])
+        self._mrdb_METHOD_EXIT(
+                sys._getframe().f_code.co_name, sys._getframe().f_lineno)
+        return mac            
+
     def _mrdb_getQtcoHosts(self, ip):
         hosts_file = "/QIBM/USERDATA/OS400/TCPIP/QTOCHOSTS"
         hosts = []
@@ -1589,16 +1734,23 @@ class Distro(distros.Distro):
                         LOG.debug(
                             "Failed to create LIND SECRMC for secure RMC")
                 else:
-                    if 'cmnlocation' in info:
+                    if 'cmnlocation' in info and info['cmnlocation'] != '' and info['cmnlocation'] is not None:
                         location = info['cmnlocation']
                         LOG.debug(
                             "Configure the IP interface base on the cmnlocation %s", location)
                         rscname = self._mrdb_get_rscname_by_hardware_location(
                             location)
                     else:
-                        LOG.error(
-                            "Fatal error: key 'cmnlocation' does not found in %s", info)
-
+                        # if cmnlocation is unavailable, use hwaddress
+                        if 'hwaddress' in info:
+                            macaddress = info['hwaddress']
+                            LOG.debug(
+                                "cmnlocation not found in %s, Configure the IP interface base on the MAC address: %s", info, macaddress)
+                            rscname = self._mrdb_get_rscname_by_mac_address(macaddress)
+                        else:
+                            LOG.error(
+                                "Fatal Error: fail to get hardware address from %s", info
+                            )                        
                     if rscname:
                         LOG.debug(
                             "rscname %s found for TCPIP interface %s", rscname, info)

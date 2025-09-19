@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3.9
+#!/QOpenSys/pkgs/bin/python3.13
 """
 Script which takes one or more file paths and reports on their detected
 encodings

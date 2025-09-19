@@ -461,9 +461,9 @@ class _LowLevelParser(SourceReader):
                     )
 
         cacheToken = (r'(?:'
-                      + r'(?P<REFRESH_CACHE>\*' + interval + '\*)'
+                      + r'(?P<REFRESH_CACHE>\\*' + interval + '\\*)'
                       + '|'
-                      + r'(?P<STATIC_CACHE>\*)'
+                      + r'(?P<STATIC_CACHE>\\*)'
                       + '|'
                       + r'(?P<NO_CACHE>)'
                       + ')')
@@ -554,7 +554,7 @@ class _LowLevelParser(SourceReader):
         self.PSPEndTokenRE = cachedRegex(escCharLookBehind + endTokenEsc)
 
     def _unescapeCheetahVars(self, theString):
-        """Unescape any escaped Cheetah \$vars in the string.
+        """Unescape any escaped Cheetah \\$vars in the string.
         """
 
         token = self.setting('cheetahVarStartToken')

@@ -31,10 +31,11 @@ from cloudinit import util
 from cloudinit import log as logging
 from itoolkit import *
 from itoolkit.transport import DatabaseTransport
-import ibm_db_dbi as dbi
+from itoolkit.transport import DirectTransport
 
-conn = dbi.connect()
-itransport = DatabaseTransport(conn)
+# Initialize DirectTransport 
+itransport = DirectTransport() 
+
 #frequency = PER_ALWAYS
 LOG = logging.getLogger(__name__)
 

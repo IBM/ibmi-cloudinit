@@ -9,7 +9,7 @@ that are also useful for external consumption.
 
 """
 
-import cgi
+import email
 import codecs
 import collections
 import io
@@ -28,6 +28,7 @@ from .compat import (quote, urlparse, bytes, str, OrderedDict, unquote, is_py2,
 from .cookies import RequestsCookieJar, cookiejar_from_dict
 from .structures import CaseInsensitiveDict
 from .exceptions import InvalidURL
+from email.message import Message
 
 _hush_pyflakes = (RequestsCookieJar,)
 
@@ -308,7 +309,13 @@ def get_encoding_from_headers(headers):
     if not content_type:
         return None
 
-    content_type, params = cgi.parse_header(content_type)
+    msg = Message()
+    msg['content-type'] = content_type
+    content_type = msg.get_content_type()
+    params = {}
+    parameters = msg.get_params()
+    if parameters:
+        params = dict(parameters[1:])
 
     if 'charset' in params:
         return params['charset'].strip("'\"")

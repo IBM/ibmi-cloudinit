@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3.9
+#!/QOpenSys/pkgs/bin/python3.13
 disks = {
     "diskpool1":{
         "name" : "SYSBASE",
@@ -25,7 +25,7 @@ import subprocess
 import logging
 from itoolkit import *
 from itoolkit.transport import DatabaseTransport
-import ibm_db_dbi as dbi
+from itoolkit.transport import DirectTransport
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level = logging.INFO)
@@ -41,8 +41,8 @@ console.setFormatter(formatter)
 logger.addHandler(handler)
 logger.addHandler(console)
 
-conn = dbi.connect()
-itransport = DatabaseTransport(conn)
+# Initialize DirectTransport 
+itransport = DirectTransport()
 
 def getDetailConfig():
     names = []

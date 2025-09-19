@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3.9
+#!/QOpenSys/pkgs/bin/python3.13
 # vi: ts=4 expandtab
 #
 #    Copyright (C) 2012 Canonical Ltd.

@@ -21,7 +21,6 @@ except ImportError:
     from io import StringIO
 import traceback
 import pprint
-import cgi  # Used by .webInput() if the template is a CGI script.
 import types
 
 from Cheetah import ErrorCatchers              # for placeholder tags
@@ -144,7 +143,7 @@ class TemplatePreprocessor(object):
 
     See the docstring for Template.compile
 
-    \*\* Preprocessors are an advanced topic \*\*
+    \\*\\* Preprocessors are an advanced topic \\*\\*
     '''
 
     def __init__(self, settings):
@@ -1617,7 +1616,7 @@ class Template(Servlet):
         """Compile the template. This method is automatically called by
         Template.__init__ it is provided with 'file' or 'source' args.
 
-        USERS SHOULD \*NEVER\* CALL THIS METHOD THEMSELVES.
+        USERS SHOULD \\*NEVER\\* CALL THIS METHOD THEMSELVES.
         Use Template.compile instead.
         """
         if compilerSettings is Unspecified:
@@ -1771,11 +1770,11 @@ class Template(Servlet):
 
         because this pretty-prints all the values inside HTML <PRE> tags.
 
-        \*\*\* KLUDGE: 'debug' is supposed to insert into the template output,
+        \\*\\*\\* KLUDGE: 'debug' is supposed to insert into the template output,
         but it wasn't working so I changed it to a'print' statement.
         So the debugging output will appear wherever standard output
         is pointed, whether at the terminal, in a Webware log file,
-        or whatever. \*\*\*
+        or whatever. \\*\\*\\*
 
         Since we didn't specify any coversions, the value is a string.  It's a
         'single' value because we specified it in 'names' rather than
@@ -1919,7 +1918,21 @@ class Template(Servlet):
         if isCgi and src in ('f', 'v'):
             global _formUsedByWebInput
             if _formUsedByWebInput is None:
-                _formUsedByWebInput = cgi.FieldStorage()
+                class FormStorage:
+                    def __init__(self):
+                        self.form_data = {}
+                        if os.environ.get("REQUEST_METHOD") == "POST":
+                            content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+                            post_data = sys.stdin.read(content_length)
+                            form_data_pairs = parse_qsl(post_data, keep_blank_values=True)
+                        else:
+                            query_string = os.environ.get("QUERY_STRING", "")
+                            form_data_pairs = parse_qsl(query_string, keep_blank_values=True)
+                        for key, value in form_data_pairs:
+                            self.form_data[key] = value
+                    def getvalue(self, key):
+                        return self.form_data.get(key)
+                _formUsedByWebInput = FormStorage()
             source, func = 'field', _formUsedByWebInput.getvalue
         elif isCgi and src == 'c':
             raise RuntimeError("can't get cookies from a CGI script")
@@ -1981,7 +1994,7 @@ def genParserErrorFromPythonException(source, file,
         pyLineno = exception.lineno
     else:
         pyLineno = int(
-            re.search('[ \t]*File.*line (\d+)', formatedExc).group(1))
+            re.search(r'[ \t]*File.*line (\d+)', formatedExc).group(1))
 
     lines = generatedPyCode.splitlines()
 
@@ -2032,7 +2045,7 @@ def genParserErrorFromPythonException(source, file,
     else:
         lineno = None
         col = None
-        cheetahPosMatch = re.search('line (\d+), col (\d+)',
+        cheetahPosMatch = re.search(r'line (\d+), col (\d+)',
                                     '\n'.join(lines[max(pyLineno - 2, 0):]))
         if cheetahPosMatch:
             lineno = int(cheetahPosMatch.group(1))

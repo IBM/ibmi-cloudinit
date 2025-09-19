@@ -1,4 +1,4 @@
-#!/QOpenSys/pkgs/bin/python3.9
+#!/QOpenSys/pkgs/bin/python3.13
 # vi: ts=4 expandtab
 #
 #    Copyright (C) 2012 Canonical Ltd.
@@ -38,7 +38,7 @@ if os.path.exists(os.path.join(possible_topdir, "cloudinit", "__init__.py")):
     sys.path.insert(0, possible_topdir)
 
 from cloudinit import patcher
-patcher.patch()
+patcher.patch_logging()
 
 from cloudinit import log as logging
 from cloudinit import netinfo

@@ -8,10 +8,10 @@ Data structures that power Requests.
 
 """
 
-import collections
+from collections.abc import MutableMapping
 
 
-class CaseInsensitiveDict(collections.MutableMapping):
+class CaseInsensitiveDict(MutableMapping):
     """
     A case-insensitive ``dict``-like object.
 

@@ -20,6 +20,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="Cheetah.Compiler")
+
 import http.client
 import time
 import urllib
@@ -42,13 +45,23 @@ SSL_ENABLED = False
 CONFIG_ENABLED = False  # This was added in 0.7 (but taken out in >=1.0)
 _REQ_VER = None
 try:
-    from distutils.version import LooseVersion
     import pkg_resources
+
+    def parse_version(version_str):
+        parts = version_str.split('-',1)[0].split('.')
+        result = []
+        for part in parts:
+            if part.isdigit():
+                result.append(int(part))
+            else:
+                result.append(part)
+        return tuple(result)
+
     _REQ = pkg_resources.get_distribution('requests')
-    _REQ_VER = LooseVersion(_REQ.version)  # pylint: disable=E1103
-    if _REQ_VER >= LooseVersion('0.8.8'):
+    _REQ_VER = parse_version(_REQ.version)
+    if _REQ_VER >= parse_version('0.8.8'):
         SSL_ENABLED = True
-    if _REQ_VER >= LooseVersion('0.7.0') and _REQ_VER < LooseVersion('1.0.0'):
+    if _REQ_VER >= parse_version('0.7.0') and _REQ_VER < parse_version('1.0.0'):
         CONFIG_ENABLED = True
 except:
     pass

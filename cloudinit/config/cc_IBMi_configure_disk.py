@@ -2,11 +2,10 @@ from cloudinit import util
 from cloudinit import log as logging
 
 from itoolkit import *
-from itoolkit.transport import DatabaseTransport
-import ibm_db_dbi as dbi
+from itoolkit.transport import DirectTransport # Assuming DirectTransport is available 
 
-conn = dbi.connect()
-itransport = DatabaseTransport(conn)
+# Initialize DirectTransport 
+itransport = DirectTransport() 
 
 from cloudinit.settings import PER_INSTANCE
 from cloudinit.settings import PER_ALWAYS
