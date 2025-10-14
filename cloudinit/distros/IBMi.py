@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 from itoolkit.transport import DirectTransport
 
-__ibmi_distro_version__ = "1.8"
+__ibmi_distro_version__ = "1.8.1"
 
 # Initialize DirectTransport 
 itransport = DirectTransport()
@@ -1420,7 +1420,7 @@ class Distro(distros.Distro):
         mac_address = ""
         resource_name = ""
         cur_macaddr = hwaddress.upper().replace(":", "")
-        LOG.debug("MAC address from meta_data: %s", cur_macaddress);
+        LOG.debug("MAC address from meta_data: %s", cur_macaddr);
         if 'success' in qgyrhr:
             LOG.debug(qgyrhr['success'])
             LOG.debug("    Length of receiver variable......%s",
