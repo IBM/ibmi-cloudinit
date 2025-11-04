@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 from itoolkit.transport import DirectTransport
 
-__ibmi_distro_version__ = "1.8.1"
+__ibmi_distro_version__ = "1.8.2"
 
 # Initialize DirectTransport 
 itransport = DirectTransport()
@@ -1456,7 +1456,7 @@ class Distro(distros.Distro):
                                     "Found Enthernet Port resource %s which has MAC address %s", rec['resNam'], mac_address)                            
                 if not resource_name:
                     LOG.error(
-                        "Error when validating the MAC address %s from meta_data with the one from QgyRtvHdwRscInfo %s", cur_macadde, mac_address)
+                        "Error when validating the MAC address %s from meta_data with the one from QgyRtvHdwRscInfo %s", cur_macaddr, mac_address)
                         
         else:
             LOG.debug("Error when calling QgyRtvHdwRscList to list communication resources and their hardware address, error=%s", qgyrhr['error'])
