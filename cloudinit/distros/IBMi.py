@@ -25,7 +25,7 @@ from itoolkit import iDS
 from itoolkit.transport import DatabaseTransport
 from itoolkit.transport import DirectTransport
 
-__ibmi_distro_version__ = "1.8.2"
+__ibmi_distro_version__ = "1.9"
 
 # Initialize DirectTransport 
 itransport = DirectTransport()
@@ -1557,6 +1557,30 @@ class Distro(distros.Distro):
             count += 1
         return True
 
+    # start engine
+    def mrdb_start_engine(self):
+        itool = iToolKit()
+        itool.add(
+            iSrvPgm('qmrdbapi', 'QMRDBAPI', 'QmrdbStartEngine')
+            .addParm(
+                iDS('MrdbSPIResult')
+                .addData(iData('result', '10i0', ''))
+                .addData(iData('additionalErrorCode', '10i0', ''))
+                .addData(iData('offset', '10i0', ''))
+                .addData(iData('reserved', '580a', ''))
+            )
+        )
+        # xmlservice
+        itool.call(itransport)
+        # output
+        qmrdbapi = itool.dict_out('qmrdbapi')
+        MrdbSPIResult = qmrdbapi['MrdbSPIResult']
+        LOG.debug(qmrdbapi)
+        if 'success' in qmrdbapi:
+            LOG.debug(qmrdbapi['success'])
+        else:
+            LOG.error(qmrdbapi['error'])
+
     # settings should be meta['network_config'], fqdn should be meta['hostname']
     def mrdb_write_IBMi_network(self, settings, fqdn, sts, bring_up=True):
         self._mrdb_METHOD_ENTER(
@@ -2498,6 +2522,8 @@ class Distro(distros.Distro):
             LOG.debug("There is no service tools server (STS) in metadata, continue")   
 
         self._mrdb_progress_log("ParserMetadata", "SUCCESS", "a+")
+
+        self.mrdb_start_engine()
 
         if force:
             rc_network = self.mrdb_write_IBMi_network(
