@@ -629,61 +629,6 @@ class Distro(distros.Distro):
         else:
             return default
 
-    def _bring_up_interface(self, device_name):
-        if device_name in 'lo':
-            return True
-
-        cmd = ['/usr/sbin/chdev', '-l',
-               IBMi_util.translate_devname(device_name), '-a', 'state=up']
-        LOG.debug(
-            "Attempting to run bring up interface %s using command %s", device_name, cmd)
-        try:
-            (_out, err) = util.subp(cmd)
-            if len(err):
-                LOG.warn("Running %s resulted in stderr output: %s", cmd, err)
-            return True
-        except util.ProcessExecutionError:
-            util.logexc(LOG, "Running interface command %s failed", cmd)
-            return False
-
-    def _bring_up_interfaces(self, device_names):
-        if device_names and 'all' in device_names:
-            raise RuntimeError(
-                ('Distro %s can not translate the device name "all"') % (self.name))
-        for d in device_names:
-            if not self._bring_up_interface(d):
-                return False
-        return True
-
-    def _bring_down_interface(self, device_name):
-        if device_name in 'lo':
-            return True
-
-        cmd = ['/usr/sbin/chdev', '-l',
-               IBMi_util.translate_devname(device_name), '-a', 'state=down']
-        LOG.debug(
-            "Attempting to run bring down interface %s using command %s", device_name, cmd)
-        try:
-            (_out, err) = util.subp(cmd)
-            if len(err):
-                LOG.warn("Running %s resulted in stderr output: %s", cmd, err)
-            return True
-        except util.ProcessExecutionError:
-            util.logexc(LOG, "Running interface command %s failed", cmd)
-            return False
-
-    def _bring_down_interfaces(self, device_names):
-        if device_names and 'all' in device_names:
-            raise RuntimeError(
-                ('Distro %s can not translate the device name "all"') % (self.name))
-        am_failed = 0
-        for d in device_names:
-            if not self._bring_down_interface(d):
-                am_failed += 1
-        if am_failed == 0:
-            return True
-        return False
-
     def set_timezone(self, tz):
         cmd = ['/usr/bin/chtz', tz]
         util.subp(cmd)
@@ -882,7 +827,6 @@ class Distro(distros.Distro):
 
         try:
             util.subp(cmd, logstring="change password for user " + user)
-            LOG.debug("Executing cmd %s", cmd)
         except Exception as e:
             util.logexc(
                 LOG, "Failed to set password for %s, error=%s", user, str(e))
